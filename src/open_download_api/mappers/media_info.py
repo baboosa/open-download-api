@@ -11,7 +11,10 @@ class VideoInfo(BaseModel):
     duration_seconds: int
     source_url: str
 
-class DownloadResult(BaseModel):
-    file_path: str
+class DownloadedFile(BaseModel):
     file_name: str
+    file_path: str
+
+class DownloadResult(BaseModel):
     kind: MediaKind
+    files: list[DownloadedFile]
