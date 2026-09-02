@@ -12,5 +12,5 @@ class Downloader(ABC):
         ...
 
     @abstractmethod
-    def download(self, url: str, kind: MediaKind) -> DownloadResult:
+    def download(self, url: str, kind: MediaKind, job_id: str) -> DownloadResult:
         ...
