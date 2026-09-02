@@ -1,0 +1,17 @@
+[project]
+name = "open-download-api"
+version = "0.1.0"
+description = "Add your description here"
+authors = [
+    { name = "weverton", email = "weverton.rbarbosa@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.141.1",
+    "uvicorn>=0.52.4",
+    "yt-dlp>=2026.8.19",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.8,<0.13.0"]
+build-backend = "uv_build"
