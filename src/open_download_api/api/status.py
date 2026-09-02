@@ -1,9 +1,13 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
-from open_download_api.schemas.status import JobStatusResponse
+from open_download_api.jobs.job_store import job_store
+from open_download_api.schemas.job import Job
 
 router = APIRouter()
 
-@router.get("/status/{job_id}", response_model=JobStatusResponse)
-def get_status(job_id: str) -> JobStatusResponse:
-    return JobStatusResponse(job_id=job_id, status="queued")
+@router.get("/status/{job_id}", response_model=Job)
+def get_status(job_id: str) -> Job:
+    job = job_store.get(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return job
