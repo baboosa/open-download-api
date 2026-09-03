@@ -4,6 +4,8 @@ from open_download_api.jobs.job_store import JobStore
 from open_download_api.mappers.media_info import DownloadedFile, MediaKind
 from open_download_api.schemas.job import Job, JobStatus
 
+JOB_TTL_SECONDS = 60 * 60 * 24  # 24 hours
+
 class RedisJobStore(JobStore):
     def __init__(self, host: str = "localhost", port: int = 6379) -> None:
         self._redis = redis.Redis(host=host, port=port, decode_responses=True)
@@ -43,7 +45,7 @@ class RedisJobStore(JobStore):
         return job
 
     def _save(self, job: Job) -> None:
-        self._redis.set(self._key(job.job_id), job.model_dump_json())
+        self._redis.set(self._key(job.job_id), job.model_dump_json(), ex=JOB_TTL_SECONDS)
 
     @staticmethod
     def _key(job_id: str) -> str:
