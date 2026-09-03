@@ -3,13 +3,18 @@ import redis
 from open_download_api.jobs.job_store import JobStore
 from open_download_api.mappers.media_info import DownloadedFile, MediaKind
 from open_download_api.schemas.job import Job, JobStatus
+from open_download_api.settings import settings
 
 JOB_TTL_SECONDS = 60 * 60 * 24  # 24 hours
 
 class RedisJobStore(JobStore):
-    def __init__(self, host: str = "localhost", port: int = 6379) -> None:
-        self._redis = redis.Redis(host=host, port=port, decode_responses=True)
-
+    def __init__(self) -> None:
+        self._redis = redis.Redis(
+            host=settings.redis_host,
+            port=settings.redis_port,
+            db=settings.job_store_redis_db,
+            decode_responses=True,
+        )
     def create(self, job_id: str, kind: MediaKind) -> Job:
         job = Job(job_id=job_id, status=JobStatus.QUEUED, kind=kind)
         self._save(job)
