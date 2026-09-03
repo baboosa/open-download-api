@@ -4,7 +4,7 @@ from fastapi import APIRouter, BackgroundTasks, status
 
 from open_download_api.core.exceptions import DownloadError, UnsupportedPlatformError
 from open_download_api.core.platform_detector import platform_detector
-from open_download_api.jobs.job_store import job_store
+from open_download_api.jobs import job_store
 from open_download_api.mappers.media_info import MediaKind
 from open_download_api.schemas.download import DownloadJobResponse, DownloadRequest
 from open_download_api.schemas.job import JobStatus

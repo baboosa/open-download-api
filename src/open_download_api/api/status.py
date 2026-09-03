@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 
-from open_download_api.jobs.job_store import job_store
+from open_download_api.jobs import job_store
 from open_download_api.schemas.job import Job
 
 router = APIRouter()
