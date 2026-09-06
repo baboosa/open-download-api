@@ -7,5 +7,6 @@ class Settings(BaseSettings):
     redis_port: int = 6379
     job_store_redis_db: int = 1
     celery_broker_db: int = 0
+    cors_allowed_origins: list[str] = ["http://localhost:5173"]
 
 settings = Settings()
