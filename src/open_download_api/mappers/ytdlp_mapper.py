@@ -8,11 +8,12 @@ PLAYLIST_ITEMS_RANGE = f"1-{MAX_PLAYLIST_ITEMS}"
 
 class YtDlpMapper:
     @staticmethod
-    def map_one(raw: RawInfo) -> VideoInfo:
+    def map_one(raw: dict) -> VideoInfo:
         return VideoInfo(
             title=raw.get("title", "Not title"),
             duration_seconds=raw.get("duration") or 0,
             source_url=raw.get("webpage_url") or raw.get("url", ""),
+            thumbnail_url=raw.get("thumbnail"),
         )
 
     @staticmethod

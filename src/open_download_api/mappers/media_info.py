@@ -11,6 +11,9 @@ class VideoInfo(BaseModel):
     title: str = Field(description="Video title", examples=["Rick Astley - Never Gonna Give You Up"])
     duration_seconds: int = Field(description="Video duration, in seconds", examples=[213])
     source_url: str = Field(description="Canonical URL of this specific video")
+    thumbnail_url: str | None = Field(
+        default=None, description="URL of the video's thumbnail image, if available"
+    )
 
 class DownloadedFile(BaseModel):
     file_name: str

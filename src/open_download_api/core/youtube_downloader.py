@@ -1,36 +1,34 @@
-import uuid, yt_dlp
-
-from urllib.parse import urlparse
 from pathlib import Path
+from urllib.parse import urlparse
+
+import yt_dlp
 from yt_dlp.utils import DownloadError as YtDlpDownloadError
-from typing import TypedDict, NotRequired, Literal
 
 from open_download_api.core.downloader import Downloader
 from open_download_api.core.exceptions import DownloadError, ExtractionError
-from open_download_api.mappers.media_info import DownloadResult, MediaKind, VideoInfo, DownloadedFile
-from open_download_api.mappers.ytdlp_mapper import YtDlpMapper, PLAYLIST_ITEMS_RANGE
+from open_download_api.core.ytdlp_types import (
+    AUDIO_CODEC,
+    POSTPROCESSOR_EMBED_THUMBNAIL,
+    POSTPROCESSOR_EXTRACT_AUDIO,
+    POSTPROCESSOR_METADATA,
+    EmbedThumbnailPostprocessor,
+    FFmpegExtractAudioPostprocessor,
+    FFmpegMetadataPostprocessor,
+    YtDlpOptions,
+)
+from open_download_api.mappers.media_info import (
+    DownloadedFile,
+    DownloadResult,
+    MediaKind,
+    VideoInfo,
+)
+from open_download_api.mappers.ytdlp_mapper import PLAYLIST_ITEMS_RANGE, YtDlpMapper
 from open_download_api.utils.text import slugify
-
-PostprocessorKey = Literal["FFmpegExtractAudio"]
-AudioCodec = Literal["mp3"]
 
 MEDIA_DIR = Path("media")
 AUDIO_FORMAT_SELECTOR = "bestaudio/best"
 VIDEO_FORMAT_SELECTOR = "bestvideo+bestaudio/best"
-AUDIO_CODEC = "mp3"
 VIDEO_CONTAINER = "mp4"
-POSTPROCESSOR_EXTRACT_AUDIO = "FFmpegExtractAudio"
-
-class YtDlpPostprocessor(TypedDict):
-    key: PostprocessorKey
-    preferredcodec: AudioCodec
-
-class YtDlpOptions(TypedDict):
-    outtmpl: str
-    playlist_items: str
-    format: str
-    merge_output_format: NotRequired[str]
-    postprocessors: NotRequired[list[YtDlpPostprocessor]]
 
 YOUTUBE_HOSTNAMES = {"www.youtube.com", "youtube.com", "music.youtube.com", "youtu.be"}
 
@@ -62,7 +60,7 @@ class YoutubeDownloader(Downloader):
         raw = self._run_download(url, options)
 
         entries = YtDlpMapper.extract_entries(raw)
-        files = [self._rename_entry_output(job_dir, entry) for entry in entries]
+        files = [self._rename_entry_output(job_dir, entry, kind) for entry in entries]
 
         return DownloadResult(kind=kind, files=files)
 
@@ -78,13 +76,19 @@ class YoutubeDownloader(Downloader):
         }
 
         if kind == MediaKind.AUDIO:
-            postprocessor: YtDlpPostprocessor = {
+            extract_audio: FFmpegExtractAudioPostprocessor = {
                 "key": POSTPROCESSOR_EXTRACT_AUDIO,
                 "preferredcodec": AUDIO_CODEC,
             }
-            options["postprocessors"] = [postprocessor]
+            metadata: FFmpegMetadataPostprocessor = {"key": POSTPROCESSOR_METADATA}
+            embed_thumbnail: EmbedThumbnailPostprocessor = {"key": POSTPROCESSOR_EMBED_THUMBNAIL}
+
+            options["writethumbnail"] = True
+            options["postprocessors"] = [extract_audio, metadata, embed_thumbnail]
         else:
+            metadata: FFmpegMetadataPostprocessor = {"key": POSTPROCESSOR_METADATA}
             options["merge_output_format"] = VIDEO_CONTAINER
+            options["postprocessors"] = [metadata]
 
         return options
 
@@ -98,16 +102,10 @@ class YoutubeDownloader(Downloader):
             raise DownloadError(f"Could not download media: {exc}") from exc
 
     @staticmethod
-    def _find_downloaded_file(file_id: str) -> Path:
-        matches = list(MEDIA_DIR.glob(f"{file_id}.*"))
-        if not matches:
-            raise DownloadError("Download finished but output file was not found")
-        return matches[0]
-
-    @staticmethod
-    def _rename_entry_output(job_dir: Path, entry: dict) -> DownloadedFile:
+    def _rename_entry_output(job_dir: Path, entry: dict, kind: MediaKind) -> DownloadedFile:
         video_id = entry.get("id")
-        matches = list(job_dir.glob(f"{video_id}.*"))
+        expected_ext = AUDIO_CODEC if kind == MediaKind.AUDIO else VIDEO_CONTAINER
+        matches = list(job_dir.glob(f"{video_id}.{expected_ext}"))
         if not matches:
             raise DownloadError(f"Downloaded file not found for id {video_id}")
 
@@ -115,5 +113,9 @@ class YoutubeDownloader(Downloader):
         slug = slugify(entry.get("title", "media"))
         final_path = original_file.with_stem(f"{slug}-{video_id[:8]}")
         original_file.rename(final_path)
+
+        # remove leftovers (ex: thumbnail image that wasn't cleaned up by yt-dlp)
+        for leftover in job_dir.glob(f"{video_id}.*"):
+            leftover.unlink(missing_ok=True)
 
         return DownloadedFile(file_name=final_path.name, file_path=str(final_path))
