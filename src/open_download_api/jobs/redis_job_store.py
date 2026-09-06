@@ -1,7 +1,11 @@
 import redis
 
 from open_download_api.jobs.job_store import JobStore
-from open_download_api.mappers.media_info import DownloadedFile, MediaKind
+from open_download_api.mappers.media_info import (
+    DownloadedFile,
+    FailedDownload,
+    MediaKind,
+)
 from open_download_api.schemas.job import Job, JobStatus
 from open_download_api.settings import settings
 
@@ -15,8 +19,9 @@ class RedisJobStore(JobStore):
             db=settings.job_store_redis_db,
             decode_responses=True,
         )
-    def create(self, job_id: str, kind: MediaKind) -> Job:
-        job = Job(job_id=job_id, status=JobStatus.QUEUED, kind=kind)
+
+    def create(self, job_id: str, kind: MediaKind, total_items: int) -> Job:
+        job = Job(job_id=job_id, status=JobStatus.QUEUED, kind=kind, total_items=total_items)
         self._save(job)
         return job
 
@@ -31,16 +36,23 @@ class RedisJobStore(JobStore):
         job.status = JobStatus.RUNNING
         self._save(job)
 
-    def mark_finished(self, job_id: str, files: list[DownloadedFile]) -> None:
+    def mark_finished(self, job_id: str, files: list[DownloadedFile], failed: list[FailedDownload]) -> None:
         job = self._require(job_id)
         job.status = JobStatus.FINISHED
         job.files = files
+        job.failed = failed
         self._save(job)
 
-    def mark_failed(self, job_id: str, error_message: str) -> None:
+    def mark_failed(self, job_id: str, error_message: str, failed: list[FailedDownload]) -> None:
         job = self._require(job_id)
         job.status = JobStatus.FAILED
         job.error_message = error_message
+        job.failed = failed
+        self._save(job)
+
+    def increment_progress(self, job_id: str) -> None:
+        job = self._require(job_id)
+        job.processed_items += 1
         self._save(job)
 
     def _require(self, job_id: str) -> Job:
@@ -55,3 +67,11 @@ class RedisJobStore(JobStore):
     @staticmethod
     def _key(job_id: str) -> str:
         return f"job:{job_id}"
+
+    def reset_for_retry(self, job_id: str, processed_items: int) -> None:
+        job = self._require(job_id)
+        job.status = JobStatus.QUEUED
+        job.processed_items = processed_items
+        job.failed = []
+        job.error_message = None
+        self._save(job)

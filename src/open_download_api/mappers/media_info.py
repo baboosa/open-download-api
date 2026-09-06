@@ -22,3 +22,8 @@ class DownloadedFile(BaseModel):
 class DownloadResult(BaseModel):
     kind: MediaKind
     files: list[DownloadedFile]
+
+class FailedDownload(BaseModel):
+    url: str
+    error_message: str
+    retryable: bool = Field(default=True, description="Whether retrying this item might succeed")

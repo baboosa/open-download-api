@@ -2,7 +2,7 @@ import uuid
 import zipfile
 from pathlib import Path
 
-from fastapi import APIRouter, status, HTTPException
+from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import FileResponse
 
 from open_download_api.core.exceptions import DownloadError, UnsupportedPlatformError
@@ -28,17 +28,11 @@ def create_download(payload: DownloadRequest) -> DownloadJobResponse:
        The actual download runs in the background via a Celery worker -
        poll GET /status/{job_id} to track progress.
     """
-    url = str(payload.url)
-
-    try:
-        platform_detector.detect(url)
-    except UnsupportedPlatformError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    urls = [str(u) for u in payload.urls]
 
     job_id = uuid.uuid4().hex
-
-    job_store.create(job_id, payload.kind)
-    run_download_job.delay(job_id, url, payload.kind.value)
+    job_store.create(job_id, payload.kind, total_items=len(urls))
+    run_download_job.delay(job_id, urls, payload.kind.value)
 
     return DownloadJobResponse(job_id=job_id, status=JobStatus.QUEUED, kind=payload.kind)
 
@@ -64,6 +58,31 @@ def get_download_file(job_id: str) -> FileResponse:
     zip_path = _build_zip(job_id, job.files)
     return FileResponse(path=zip_path, filename=zip_path.name, media_type="application/zip")
 
+@router.post(
+    "/download/{job_id}/retry",
+    status_code=status.HTTP_202_ACCEPTED,
+    response_model=DownloadJobResponse,
+    summary="Retry only the items that failed in a previous job",
+)
+def retry_download(job_id: str) -> DownloadJobResponse:
+    job = job_store.get(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    if job.status not in (JobStatus.FINISHED, JobStatus.FAILED):
+        raise HTTPException(
+            status_code=409, detail=f"Job cannot be retried while status={job.status.value}"
+        )
+
+    urls_to_retry = [item.url for item in job.failed if item.retryable]
+    if not urls_to_retry:
+        raise HTTPException(status_code=409, detail="This job has no retryable failed items")
+
+    remaining_processed = job.total_items - len(urls_to_retry)
+    job_store.reset_for_retry(job_id, remaining_processed)
+    run_download_job.delay(job_id, urls_to_retry, job.kind.value)
+
+    return DownloadJobResponse(job_id=job_id, status=JobStatus.QUEUED, kind=job.kind)
 
 def _build_zip(job_id: str, files: list) -> Path:
     job_dir = MEDIA_DIR / job_id
