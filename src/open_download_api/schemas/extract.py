@@ -1,6 +1,7 @@
-from pydantic import BaseModel, HttpUrl, Field
+from pydantic import BaseModel, Field, HttpUrl
 
 from open_download_api.mappers.media_info import VideoInfo
+
 
 class ExtractInfoRequest(BaseModel):
     url: HttpUrl = Field(
