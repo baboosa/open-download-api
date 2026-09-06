@@ -1,5 +1,6 @@
 import uuid, yt_dlp
 
+from urllib.parse import urlparse
 from pathlib import Path
 from yt_dlp.utils import DownloadError as YtDlpDownloadError
 from typing import TypedDict, NotRequired, Literal
@@ -31,9 +32,12 @@ class YtDlpOptions(TypedDict):
     merge_output_format: NotRequired[str]
     postprocessors: NotRequired[list[YtDlpPostprocessor]]
 
+YOUTUBE_HOSTNAMES = {"www.youtube.com", "youtube.com", "music.youtube.com", "youtu.be"}
+
 class YoutubeDownloader(Downloader):
     def matches(self, url: str) -> bool:
-        return "youtube.com" in url or "youtu.be" in url
+        hostname = urlparse(url).hostname or ""
+        return hostname in YOUTUBE_HOSTNAMES
 
     def fetch_info(self, url: str) -> list[VideoInfo]:
         options = {
