@@ -7,8 +7,16 @@ from open_download_api.schemas.extract import ExtractInfoRequest, ExtractInfoRes
 
 router = APIRouter()
 
-@router.post("/extract-info", response_model=ExtractInfoResponse)
+@router.post(
+    "/extract-info",
+    response_model=ExtractInfoResponse,
+    summary="Extract metadata from a video or playlist",
+)
 def extract_info(payload: ExtractInfoRequest) -> ExtractInfoResponse:
+    """
+        Fetches metadata (title, duration, source URL) for a video or a
+        playlist (limited to the first 15 items), without downloading anything.
+    """
     url = str(payload.url)
     try:
         downloader = platform_detector.detect(url)
