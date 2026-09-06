@@ -1,7 +1,6 @@
 from fastapi import APIRouter, HTTPException
 
 from open_download_api.core.exceptions import ExtractionError, UnsupportedPlatformError
-from open_download_api.core.exceptions import UnsupportedPlatformError
 from open_download_api.core.platform_detector import platform_detector
 from open_download_api.schemas.extract import ExtractInfoRequest, ExtractInfoResponse
 

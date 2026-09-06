@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 
 from open_download_api.mappers.media_info import DownloadResult, MediaKind, VideoInfo
 
+
 class Downloader(ABC):
     @abstractmethod
     def matches(self, url: str) -> bool:

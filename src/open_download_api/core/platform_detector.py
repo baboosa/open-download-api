@@ -2,6 +2,7 @@ from open_download_api.core.downloader import Downloader
 from open_download_api.core.exceptions import UnsupportedPlatformError
 from open_download_api.core.youtube_downloader import YoutubeDownloader
 
+
 class PlatformDetector:
     def __init__(self, strategies: list[Downloader]):
         self._strategies = strategies

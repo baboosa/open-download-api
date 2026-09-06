@@ -1,4 +1,5 @@
 from celery import Celery
+
 from open_download_api.settings import settings
 
 celery_app = Celery(

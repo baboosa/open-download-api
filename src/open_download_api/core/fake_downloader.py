@@ -1,5 +1,6 @@
 from open_download_api.core.downloader import Downloader
 
+
 class FakeDownloader(Downloader):
     def matches(self, url: str) -> bool:
         return "youtube.com" in url or "youtu.be" in url

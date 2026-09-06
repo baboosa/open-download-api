@@ -1,6 +1,7 @@
 from open_download_api.mappers.media_info import VideoInfo
 from open_download_api.mappers.ytdlp_mapper import YtDlpMapper
 
+
 def test_map_one_extracts_expected_fields():
     raw = {
         "title": "Test video",

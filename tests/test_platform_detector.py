@@ -5,6 +5,7 @@ from open_download_api.core.exceptions import UnsupportedPlatformError
 from open_download_api.core.platform_detector import PlatformDetector
 from open_download_api.mappers.media_info import DownloadResult, MediaKind, VideoInfo
 
+
 class DummyDownloader(Downloader):
     def matches(self, url: str) -> bool:
         return "example.com" in url
