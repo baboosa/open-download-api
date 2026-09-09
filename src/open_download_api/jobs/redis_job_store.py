@@ -36,23 +36,26 @@ class RedisJobStore(JobStore):
         job.status = JobStatus.RUNNING
         self._save(job)
 
-    def mark_finished(self, job_id: str, files: list[DownloadedFile], failed: list[FailedDownload]) -> None:
+    def record_success(self, job_id: str, file: DownloadedFile) -> None:
         job = self._require(job_id)
-        job.status = JobStatus.FINISHED
-        job.files = files
-        job.failed = failed
-        self._save(job)
-
-    def mark_failed(self, job_id: str, error_message: str, failed: list[FailedDownload]) -> None:
-        job = self._require(job_id)
-        job.status = JobStatus.FAILED
-        job.error_message = error_message
-        job.failed = failed
-        self._save(job)
-
-    def increment_progress(self, job_id: str) -> None:
-        job = self._require(job_id)
+        job.files.append(file)
         job.processed_items += 1
+        self._save(job)
+
+    def record_failure(self, job_id: str, failed: FailedDownload) -> None:
+        job = self._require(job_id)
+        job.failed.append(failed)
+        job.processed_items += 1
+        self._save(job)
+
+    def finalize(self, job_id: str) -> None:
+        job = self._require(job_id)
+        if job.files:
+            job.status = JobStatus.FINISHED
+            job.error_message = None
+        else:
+            job.status = JobStatus.FAILED
+            job.error_message = f"All {len(job.failed)} item(s) failed to download"
         self._save(job)
 
     def _require(self, job_id: str) -> Job:

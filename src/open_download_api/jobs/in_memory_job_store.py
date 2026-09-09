@@ -22,22 +22,28 @@ class InMemoryJobStore(JobStore):
     def mark_running(self, job_id: str) -> None:
         self._jobs[job_id].status = JobStatus.RUNNING
 
-    def mark_finished(self, job_id: str, files: list[DownloadedFile], failed: list[FailedDownload]) -> None:
-        self._jobs[job_id].status = JobStatus.FINISHED
-        self._jobs[job_id].files = files
-        self._jobs[job_id].failed = failed
+    def record_success(self, job_id: str, file: DownloadedFile) -> None:
+        job = self._jobs[job_id]
+        job.files.append(file)
+        job.processed_items += 1
 
-    def mark_failed(self, job_id: str, error_message: str, failed: list[FailedDownload]) -> None:
-        self._jobs[job_id].status = JobStatus.FAILED
-        self._jobs[job_id].error_message = error_message
-        self._jobs[job_id].failed = failed
+    def record_failure(self, job_id: str, failed: FailedDownload) -> None:
+        job = self._jobs[job_id]
+        job.failed.append(failed)
+        job.processed_items += 1
 
-    def increment_progress(self, job_id: str) -> None:
-        self._jobs[job_id].processed_items += 1
+    def finalize(self, job_id: str) -> None:
+        job = self._jobs[job_id]
+        if job.files:
+            job.status = JobStatus.FINISHED
+            job.error_message = None
+        else:
+            job.status = JobStatus.FAILED
+            job.error_message = f"All {len(job.failed)} item(s) failed to download"
 
-    def reset_for_retry(self, job_id: str, processed_items: int) -> None:
+    def reset_for_retry(self, job_id: str, kept_failed: list[FailedDownload], processed_items: int) -> None:
         job = self._jobs[job_id]
         job.status = JobStatus.QUEUED
         job.processed_items = processed_items
-        job.failed = []
+        job.failed = kept_failed
         job.error_message = None

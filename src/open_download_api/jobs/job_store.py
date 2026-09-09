@@ -22,17 +22,17 @@ class JobStore(ABC):
         ...
 
     @abstractmethod
-    def mark_finished(self, job_id: str, files: list[DownloadedFile], failed: list[FailedDownload]) -> None:
+    def record_success(self, job_id: str, file: DownloadedFile) -> None:
         ...
 
     @abstractmethod
-    def mark_failed(self, job_id: str, error_message: str, failed: list[FailedDownload]) -> None:
+    def record_failure(self, job_id: str, failed: FailedDownload) -> None:
         ...
 
     @abstractmethod
-    def increment_progress(self, job_id: str) -> None:
+    def finalize(self, job_id: str) -> None:
         ...
 
     @abstractmethod
-    def reset_for_retry(self, job_id: str, processed_items: int) -> None:
+    def reset_for_retry(self, job_id: str, kept_failed: list[FailedDownload], processed_items: int) -> None:
         ...

@@ -70,16 +70,16 @@ def retry_download(job_id: str) -> DownloadJobResponse:
         raise HTTPException(status_code=404, detail="Job not found")
 
     if job.status not in (JobStatus.FINISHED, JobStatus.FAILED):
-        raise HTTPException(
-            status_code=409, detail=f"Job cannot be retried while status={job.status.value}"
-        )
+        raise HTTPException(status_code=409, detail=f"Job cannot be retried while status={job.status.value}")
 
     urls_to_retry = [item.url for item in job.failed if item.retryable]
     if not urls_to_retry:
         raise HTTPException(status_code=409, detail="This job has no retryable failed items")
 
+    kept_failed = [item for item in job.failed if not item.retryable]
     remaining_processed = job.total_items - len(urls_to_retry)
-    job_store.reset_for_retry(job_id, remaining_processed)
+
+    job_store.reset_for_retry(job_id, kept_failed, remaining_processed)
     run_download_job.delay(job_id, urls_to_retry, job.kind.value)
 
     return DownloadJobResponse(job_id=job_id, status=JobStatus.QUEUED, kind=job.kind)
@@ -96,14 +96,3 @@ def _build_zip(job_id: str, files: list) -> Path:
             zip_file.write(downloaded_file.file_path, arcname=downloaded_file.file_name)
 
     return zip_path
-
-def _run_download_job(job_id: str, url: str, kind: MediaKind) -> None:
-    job_store.mark_running(job_id)
-    try:
-        downloader = platform_detector.detect(url)
-        result = downloader.download(url, kind, job_id)
-    except (UnsupportedPlatformError, DownloadError) as exc:
-        job_store.mark_failed(job_id, str(exc))
-        return
-
-    job_store.mark_finished(job_id, result.files)
