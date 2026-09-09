@@ -118,4 +118,8 @@ class YoutubeDownloader(Downloader):
         for leftover in job_dir.glob(f"{video_id}.*"):
             leftover.unlink(missing_ok=True)
 
-        return DownloadedFile(file_name=final_path.name, file_path=str(final_path))
+        return DownloadedFile(
+            file_name=final_path.name,
+            file_path=str(final_path),
+            file_size_bytes=final_path.stat().st_size,
+        )

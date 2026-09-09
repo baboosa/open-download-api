@@ -18,6 +18,7 @@ class VideoInfo(BaseModel):
 class DownloadedFile(BaseModel):
     file_name: str
     file_path: str
+    file_size_bytes: int = Field(description="File size in bytes")
 
 class DownloadResult(BaseModel):
     kind: MediaKind
